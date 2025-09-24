@@ -30,7 +30,7 @@ A **Python-based desktop application** for downloading YouTube videos and playli
 
 ### Windows
 
-1. Download the latest release from the [Releases]([https://github.com/<your-username>/<repo-name>/releases](https://github.com/yashsaxena15/YouTube-Video-Playlist-Downloader/releases/tag/v1.0.0) page.  
+1. Download the latest release from the [Releases]([https://github.com/yashsaxena15/YouTube-Video-Playlist-Downloader/releases/tag/v1.0.0]) page.  
 2. Extract the `.zip` file (if applicable).  
 3. Run `main.exe`.  
 

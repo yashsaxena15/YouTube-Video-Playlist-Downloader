@@ -7,6 +7,7 @@ from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt
 from downloader import DownloadThread
 from settings import settings, save_settings
+import re
 
 class YouTubeDownloader(QWidget):
     def __init__(self):
@@ -14,14 +15,14 @@ class YouTubeDownloader(QWidget):
         self.setWindowTitle("YouTube Playlist Downloader")
         self.setGeometry(300, 200, 750, 600)
         self.setStyleSheet("background-color: #1e1e1e; color: #f0f0f0;")
-        self.video_progress_bars = {}  # Store progress bars for each video
+        self.video_widgets = {}  # Store dict with progress bar, speed label, size label, eta label
         self.init_ui()
 
     def init_ui(self):
         layout = QVBoxLayout()
         layout.setSpacing(12)
 
-        # URL input
+        # --- URL Input ---
         url_layout = QHBoxLayout()
         url_label = QLabel("YouTube URL:")
         url_label.setFont(QFont("Arial", 10, QFont.Bold))
@@ -34,7 +35,7 @@ class YouTubeDownloader(QWidget):
         url_layout.addWidget(self.url_input)
         layout.addLayout(url_layout)
 
-        # Download folder
+        # --- Download Folder ---
         folder_layout = QHBoxLayout()
         folder_label = QLabel("Download Folder:")
         folder_label.setFont(QFont("Arial", 10, QFont.Bold))
@@ -48,7 +49,7 @@ class YouTubeDownloader(QWidget):
         folder_layout.addWidget(folder_btn)
         layout.addLayout(folder_layout)
 
-        # Download type
+        # --- Download Type ---
         type_layout = QHBoxLayout()
         type_label = QLabel("Download Type:")
         type_label.setFont(QFont("Arial", 10, QFont.Bold))
@@ -59,7 +60,7 @@ class YouTubeDownloader(QWidget):
         type_layout.addWidget(self.download_type_combo)
         layout.addLayout(type_layout)
 
-        # Video Quality
+        # --- Video Quality ---
         video_quality_layout = QHBoxLayout()
         self.video_quality_label = QLabel("Video Quality:")
         self.video_quality_combo = QComboBox()
@@ -71,7 +72,7 @@ class YouTubeDownloader(QWidget):
         video_quality_layout.addWidget(self.video_quality_combo)
         layout.addLayout(video_quality_layout)
 
-        # Audio Quality
+        # --- Audio Quality ---
         audio_quality_layout = QHBoxLayout()
         self.audio_quality_label = QLabel("Audio Quality:")
         self.audio_quality_combo = QComboBox()
@@ -80,7 +81,7 @@ class YouTubeDownloader(QWidget):
         audio_quality_layout.addWidget(self.audio_quality_combo)
         layout.addLayout(audio_quality_layout)
 
-        # File format
+        # --- File Format ---
         format_layout = QHBoxLayout()
         self.file_format_label = QLabel("File Format:")
         self.file_format_combo = QComboBox()
@@ -89,7 +90,7 @@ class YouTubeDownloader(QWidget):
         format_layout.addWidget(self.file_format_combo)
         layout.addLayout(format_layout)
 
-        # Download button
+        # --- Download Button ---
         self.download_btn = QPushButton("Download")
         self.download_btn.setStyleSheet(
             "background-color: #007acc; color: white; padding: 8px; font-size: 14px;"
@@ -97,7 +98,7 @@ class YouTubeDownloader(QWidget):
         self.download_btn.clicked.connect(self.download_clicked)
         layout.addWidget(self.download_btn, alignment=Qt.AlignCenter)
 
-        # Scroll area for per-video progress
+        # --- Scroll Area for per-video progress ---
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
         self.scroll_widget = QWidget()
@@ -147,73 +148,104 @@ class YouTubeDownloader(QWidget):
             return
 
         self.download_btn.setEnabled(False)
-        self.video_progress_bars.clear()
+        self.video_widgets.clear()
 
-        # Clear old progress bars
+        # Clear old widgets
         while self.scroll_layout.count():
             item = self.scroll_layout.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
 
+        # Start download
         self.thread = DownloadThread(
             url, folder, video_quality, download_type,
             file_format, audio_quality,
             cookiefile=settings.get("cookiefile","")
         )
         self.thread.progress_signal.connect(self.update_progress)
+        self.thread.speed_signal.connect(self.update_speed)
+        self.thread.size_signal.connect(self.update_size)
+        self.thread.eta_signal.connect(self.update_eta)  # ETA signal connected properly here
         self.thread.finished.connect(lambda: self.download_btn.setEnabled(True))
         self.thread.start()
 
+    def create_video_widgets(self, title):
+        # Title
+        title_label = QLabel(title)
+        title_label.setStyleSheet("font-weight: bold; color: #f0f0f0;")
+        
+        # Progress bar
+        progress = QProgressBar()
+        progress.setMaximum(100)
+        progress.setValue(0)
+        progress.setTextVisible(True)
+        progress.setStyleSheet("""
+            QProgressBar {
+                border: 2px solid #555;
+                border-radius: 5px;
+                text-align: center;
+                color: white;
+            }
+            QProgressBar::chunk {
+                background-color: #00bfff;
+                width: 1px;
+            }
+        """)
+        
+        # Speed, Size, ETA labels
+        speed_label = QLabel("Speed: 0 MB/s")
+        size_label = QLabel("Size: 0 MB")
+        eta_label = QLabel("ETA: 00:00:00")
+        for lbl in (speed_label, size_label, eta_label):
+            lbl.setStyleSheet("color: #f0f0f0; font-size: 15px; font-weight: bold;")
+        
+        info_layout = QHBoxLayout()
+        info_layout.addWidget(speed_label)
+        info_layout.addSpacing(20)
+        info_layout.addWidget(size_label)
+        info_layout.addSpacing(20)
+        info_layout.addWidget(eta_label)
+        info_layout.addStretch()
+        
+        # Add progress bar and info layout
+        self.scroll_layout.addWidget(title_label)
+        self.scroll_layout.addWidget(progress)
+        self.scroll_layout.addLayout(info_layout)
+        
+        self.video_widgets[title] = {
+            "progress": progress,
+            "speed": speed_label,
+            "size": size_label,
+            "eta": eta_label
+        }
+
     def update_progress(self, message):
-        """
-        Message format: '⬇️ Downloading: title - 25%' or '✅ Finished: title'
-        """
         if message.startswith("⬇️ Downloading:"):
-            parts = message.replace("⬇️ Downloading: ","").split(" - ")
-            title = parts[0].strip()
-            percent = int(float(parts[1].replace("%","").strip()))
+            percent_match = re.search(r"(\d+(\.\d+)?)%", message)
+            percent = int(float(percent_match.group(1))) if percent_match else 0
 
-            if title not in self.video_progress_bars:
-                label = QLabel(title)
-                label.setStyleSheet("font-weight: bold; color: #f0f0f0;")
-                progress = QProgressBar()
-                progress.setMaximum(100)
-                progress.setValue(0)
-                progress.setTextVisible(True)
-                progress.setStyleSheet("""
-                    QProgressBar {
-                        border: 2px solid #555;
-                        border-radius: 5px;
-                        text-align: center;
-                        color: white;
-                    }
-                    QProgressBar::chunk {
-                        background-color: #00bfff;
-                        width: 1px;
-                    }
-                """)
-                self.scroll_layout.addWidget(label)
-                self.scroll_layout.addWidget(progress)
-                self.video_progress_bars[title] = progress
+            title_part = message.replace("⬇️ Downloading: ","")
+            title = title_part.split(" - ")[0].strip()
 
-            self.video_progress_bars[title].setValue(percent)
+            if title not in self.video_widgets:
+                self.create_video_widgets(title)
+
+            self.video_widgets[title]["progress"].setValue(percent)
 
         elif message.startswith("✅ Finished:"):
-            title = message.replace("✅ Finished:","").strip()
-            if title in self.video_progress_bars:
-                progress = self.video_progress_bars[title]
-                progress.setValue(100)
-                progress.setStyleSheet("""
-                    QProgressBar {
-                        border: 2px solid #555;
-                        border-radius: 5px;
-                        text-align: center;
-                        color: white;
-                        background-color: #2e2e2e;
-                    }
-                    QProgressBar::chunk {
-                        background-color: #00bfff;
-                        width: 1px;
-                    }
-                """)
+            title = message.replace("✅ Finished:", "").strip()
+            if title in self.video_widgets:
+                self.video_widgets[title]["progress"].setValue(100)
+                self.video_widgets[title]["eta"].setText("ETA: 00:00:00")  # reset ETA
 
+    def update_speed(self, speed_msg):
+        for title, widgets in self.video_widgets.items():
+            widgets["speed"].setText(f"Speed: {speed_msg}")
+
+    def update_size(self, size_msg):
+        for title, widgets in self.video_widgets.items():
+            widgets["size"].setText(f"Size: {size_msg}")
+
+    def update_eta(self, eta_msg):
+        for title, widgets in self.video_widgets.items():
+            widgets["eta"].setText(f"ETA: {eta_msg}")

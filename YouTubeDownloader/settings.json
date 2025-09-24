@@ -1,1 +1,6 @@
-{"default_path": "C:/Users/yash/Downloads/Youtube playlist downloader", "default_quality": "720p"}
+{
+    "default_path": "D:/Downloads",
+    "default_quality": "720p",
+    "cookiefile": "D:\\yash\\GUI yt playlist\\YouTubeDownloader\\Cookie\\youtube.com_cookies.txt",
+    "ffmpeg_path": "D:\\yash\\GUI yt playlist\\YouTubeDownloader\\ffmpeg\\bin\\ffmpeg.exe"
+}

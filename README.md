@@ -22,7 +22,7 @@ A **Python-based desktop application** for downloading YouTube videos and playli
 ## Screenshots
 
 ![App Screenshot](https://github.com/yashsaxena15/YouTube-Video-Playlist-Downloader/blob/master/YouTubeDownloader/assets/screenshot.png)  
-![App Screenshot](https://github.com/yashsaxena15/YouTube-Video-Playlist-Downloader/blob/master/YouTubeDownloader/assets/screenshot2.png)
+![App Screenshot](https://github.com/yashsaxena15/YouTube-Video-Playlist-Downloader/blob/master/YouTubeDownloader/assets/screenshot3.png)
 
 
 ---

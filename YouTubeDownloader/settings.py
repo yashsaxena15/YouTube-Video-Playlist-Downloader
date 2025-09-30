@@ -1,13 +1,22 @@
 import json
 import os
+from PyQt5.QtCore import QStandardPaths
 
 # Default settings
 settings_file = "settings.json"
+
+# Get user’s Downloads folder in a cross-platform way
+download_folder = QStandardPaths.writableLocation(QStandardPaths.DownloadLocation)
+
+# Fallback if Downloads not available → use Documents
+if not download_folder:
+    download_folder = QStandardPaths.writableLocation(QStandardPaths.DocumentsLocation)
+
 settings = {
-    "default_path": os.path.expanduser("~/Downloads"),
+    "default_path": download_folder,
     "default_quality": "720p",
-    "cookiefile": r"D:\yash\GUI yt playlist\YouTubeDownloader\Cookie\youtube.com_cookies.txt",  # path to cookies.txt
-    "ffmpeg_path": r"D:\yash\GUI yt playlist\YouTubeDownloader\ffmpeg\bin\ffmpeg.exe"  # optional bundled ffmpeg path
+    "cookiefile": r"YouTubeDownloader\Cookie\youtube.com_cookies.txt",  # relative path inside installer
+    "ffmpeg_path": r"YouTubeDownloader\ffmpeg\bin\ffmpeg.exe"  # relative path inside installer
 }
 
 def save_settings():

@@ -16,7 +16,7 @@ class YouTubeDownloader(QWidget):
     def __init__(self):
         super().__init__()
         # Inside __init__ of YouTubeDownloader
-        self.setWindowIcon(QIcon("assets/app_icon.ico"))
+        self.setWindowIcon(QIcon("assets/icon.ico"))
         self.setWindowTitle("YouTube Playlist Downloader")
         self.setGeometry(300, 200, 750, 600)
         self.setStyleSheet("background-color: #1e1e1e; color: #f0f0f0;")
